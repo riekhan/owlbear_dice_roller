@@ -74,6 +74,13 @@ h2 {
   margin-top: 1rem;
 }
 
+.hint strong {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -92,5 +99,10 @@ h2 {
 
   .hint {
     color: rgba(0, 0, 0, 0.6);
+  }
+
+  .hint strong {
+    color: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.05);
   }
 }

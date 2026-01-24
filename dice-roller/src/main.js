@@ -195,7 +195,9 @@ OBR.onReady(async () => {
         },
       },
     ],
+    shortcut: 'R',
     async onClick(context) {
+      console.log('Roll dice clicked/shortcut pressed!', context.items.length, 'items');
       // Roll all selected dice
       const diceItems = context.items.filter(
         (item) => item.metadata['dice-roller/type']
@@ -215,13 +217,16 @@ OBR.onReady(async () => {
       });
 
       // Show notification with roll results
-      if (diceItems.length === 1) {
-        const die = diceItems[0];
+      // Get the updated values after rolling
+      const updatedDice = await OBR.scene.items.getItems(diceItems.map(d => d.id));
+
+      if (updatedDice.length === 1) {
+        const die = updatedDice[0];
         const diceType = die.metadata['dice-roller/type'];
-        const value = rollDice(diceType);
+        const value = die.metadata['dice-roller/value'];
         OBR.notification.show(`Rolled ${diceType.toUpperCase()}: ${value}`);
       } else {
-        OBR.notification.show(`Rolled ${diceItems.length} dice!`);
+        OBR.notification.show(`Rolled ${updatedDice.length} dice!`);
       }
     },
   });
