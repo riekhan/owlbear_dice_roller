@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dice Roller</title>
+  </head>
+  <body>
+    <div id="app">
+      <h2>Drag Dice to Scene</h2>
+      <div class="dice-grid">
+        <div class="dice-button" data-dice="d4">
+          <img src="/d4-4.svg" alt="d4" />
+          <span>d4</span>
+        </div>
+        <div class="dice-button" data-dice="d6">
+          <img src="/d6-6.svg" alt="d6" />
+          <span>d6</span>
+        </div>
+        <div class="dice-button" data-dice="d8">
+          <img src="/d8-8.svg" alt="d8" />
+          <span>d8</span>
+        </div>
+      </div>
+      <p class="hint">Drag a die onto the scene. Select and right-click to roll!</p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
