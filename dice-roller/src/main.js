@@ -13,6 +13,12 @@ function getDiceImageUrl(diceType, value) {
   return `/${diceType}-${value}.svg`;
 }
 
+// Helper function to get absolute URL for a die value
+function getAbsoluteDiceImageUrl(diceType, value) {
+  const imageUrl = getDiceImageUrl(diceType, value);
+  return new URL(imageUrl, window.location.href).href;
+}
+
 // Helper function to roll a random value for a die
 function rollDice(diceType) {
   const config = DICE_CONFIG[diceType];
@@ -195,7 +201,7 @@ OBR.onReady(async () => {
           const newValue = rollDice(diceType);
 
           // Update the die's image to show the new value
-          die.image.url = getDiceImageUrl(diceType, newValue);
+          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue);
           die.metadata['dice-roller/value'] = newValue;
         }
       });
