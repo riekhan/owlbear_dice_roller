@@ -44,7 +44,8 @@ function dynamicDicePlugin() {
           }
 
           const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 2481 3508">
-  <rect x="120" y="633.5" width="2241" height="2241" rx="900" ry="900" fill="none" stroke="${color}" stroke-width="80"/>
+  <rect x="-393.5" y="120" width="3268" height="3268" rx="900" ry="900" fill="black"/>
+  <rect x="-393.5" y="120" width="3268" height="3268" rx="900" ry="900" fill="none" stroke="${color}" stroke-width="80"/>
   ${wireframe}
   <text x="1240.5" y="1754" font-family="Arial, sans-serif" font-size="1600" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">${value}</text>
 </svg>`;
