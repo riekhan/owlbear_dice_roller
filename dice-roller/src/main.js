@@ -215,21 +215,49 @@ OBR.onReady(async () => {
           die.metadata['dice-roller/value'] = newValue;
         }
       });
-
-      // Show notification with roll results
-      // Get the updated values after rolling
-      const updatedDice = await OBR.scene.items.getItems(diceItems.map(d => d.id));
-
-      if (updatedDice.length === 1) {
-        const die = updatedDice[0];
-        const diceType = die.metadata['dice-roller/type'];
-        const value = die.metadata['dice-roller/value'];
-        OBR.notification.show(`Rolled ${diceType.toUpperCase()}: ${value}`);
-      } else {
-        OBR.notification.show(`Rolled ${updatedDice.length} dice!`);
-      }
     },
   });
 
   console.log('Context menu created');
+
+  // Set up "Roll Selected Dice" button
+  const rollButton = document.getElementById('roll-selected');
+  rollButton.addEventListener('click', async () => {
+    try {
+      // Get all selected items
+      const selection = await OBR.player.getSelection();
+      if (!selection || selection.length === 0) {
+        OBR.notification.show('No dice selected!', 'WARNING');
+        return;
+      }
+
+      // Get the actual items
+      const items = await OBR.scene.items.getItems(selection);
+
+      // Filter for dice items
+      const diceItems = items.filter(
+        (item) => item.metadata && item.metadata['dice-roller/type']
+      );
+
+      if (diceItems.length === 0) {
+        OBR.notification.show('No dice selected!', 'WARNING');
+        return;
+      }
+
+      // Roll the dice
+      await OBR.scene.items.updateItems(diceItems, (items) => {
+        for (const die of items) {
+          const diceType = die.metadata['dice-roller/type'];
+          const newValue = rollDice(diceType);
+
+          // Update the die's image to show the new value
+          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue);
+          die.metadata['dice-roller/value'] = newValue;
+        }
+      });
+    } catch (error) {
+      console.error('Error rolling dice:', error);
+      OBR.notification.show('Error rolling dice', 'ERROR');
+    }
+  });
 });
