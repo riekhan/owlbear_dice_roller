@@ -9,7 +9,7 @@ const DICE_CONFIG = {
   d10: { sides: 10, maxValue: 10 },
   d12: { sides: 12, maxValue: 12 },
   d20: { sides: 20, maxValue: 20 },
-  d100: { sides: 10, maxValue: 90 }, // d100 shows 00, 10, 20...90
+  d100: { sides: 100, maxValue: 100 }, // d100 rolls 1-100
 };
 
 // Helper function to get the image URL for a die value
@@ -27,10 +27,6 @@ function getAbsoluteDiceImageUrl(diceType, value, color = '#888888') {
 // Helper function to roll a random value for a die
 function rollDice(diceType) {
   const config = DICE_CONFIG[diceType];
-  if (diceType === 'd100') {
-    // d100 rolls 00, 10, 20, 30, 40, 50, 60, 70, 80, 90
-    return Math.floor(Math.random() * 10) * 10;
-  }
   return Math.floor(Math.random() * config.sides) + 1;
 }
 

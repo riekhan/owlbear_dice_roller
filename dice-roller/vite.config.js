@@ -43,14 +43,11 @@ function dynamicDicePlugin() {
             return;
           }
 
-          // Format display value (d100 shows "00" instead of "0")
-          const displayValue = (diceType === 'd100' && value === '0') ? '00' : value;
-
           const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 2481 3508">
   <rect x="-393.5" y="120" width="3268" height="3268" rx="1200" ry="1200" fill="black"/>
   <rect x="-393.5" y="120" width="3268" height="3268" rx="1200" ry="1200" fill="none" stroke="${color}" stroke-width="100"/>
   ${wireframe}
-  <text x="1240.5" y="1754" font-family="Arial, sans-serif" font-size="2000" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${displayValue}</text>
+  <text x="1240.5" y="1754" font-family="Arial, sans-serif" font-size="2000" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${value}</text>
 </svg>`;
 
           res.setHeader('Content-Type', 'image/svg+xml');
