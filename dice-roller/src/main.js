@@ -62,16 +62,11 @@ async function addDieToScene(diceType, position) {
     .build();
 
   await OBR.scene.items.addItems([dieItem]);
-  console.log(`Added ${diceType} with value ${maxValue} to scene at`, position);
 }
 
 // Initialize the extension
 OBR.onReady(async () => {
-  console.log('Dice Roller Extension Ready!');
-  console.log('OBR available:', OBR.isAvailable);
-
   const diceButtons = document.querySelectorAll('.dice-button');
-  console.log('Found dice buttons:', diceButtons.length);
 
   diceButtons.forEach((button) => {
     let interaction = null;
@@ -79,7 +74,6 @@ OBR.onReady(async () => {
     let finalPosition = null;
 
     button.addEventListener('pointerdown', async (e) => {
-      console.log('Pointer down on', button.dataset.dice);
       isDragging = false;
       finalPosition = null;
       const diceType = button.dataset.dice;
@@ -88,11 +82,9 @@ OBR.onReady(async () => {
 
       // Get player color for dynamic dice
       const playerColor = await OBR.player.getColor();
-      console.log('Player color:', playerColor);
 
       // Get absolute URL with player color
       const absoluteUrl = getAbsoluteDiceImageUrl(diceType, maxValue, playerColor);
-      console.log('Image URL:', absoluteUrl);
 
       try {
         // Create a temporary die item for dragging
@@ -115,16 +107,11 @@ OBR.onReady(async () => {
           })
           .build();
 
-        console.log('Starting interaction...');
         // Start interaction
         interaction = await OBR.interaction.startItemInteraction(tempDie);
         const [update, stop] = interaction;
-        console.log('Interaction started');
 
         const onPointerMove = async (moveEvent) => {
-          if (!isDragging) {
-            console.log('Started dragging');
-          }
           isDragging = true;
           const position = await OBR.viewport.inverseTransformPoint({
             x: moveEvent.clientX,
@@ -143,18 +130,14 @@ OBR.onReady(async () => {
         };
 
         const onPointerUp = async () => {
-          console.log('Pointer up, isDragging:', isDragging);
           document.removeEventListener('pointermove', onPointerMove);
           document.removeEventListener('pointerup', onPointerUp);
 
           if (interaction) {
-            console.log('Stopping interaction');
             stop();
 
             // If we dragged, add the die to the scene
             if (isDragging && finalPosition) {
-              console.log('Adding die to scene at position:', finalPosition);
-
               const finalDie = buildImage({
                 url: absoluteUrl,
                 mime: 'image/svg+xml',
@@ -175,7 +158,6 @@ OBR.onReady(async () => {
                 .build();
 
               await OBR.scene.items.addItems([finalDie]);
-              console.log('Die added successfully');
             }
 
             interaction = null;
@@ -205,9 +187,7 @@ OBR.onReady(async () => {
         },
       },
     ],
-    shortcut: 'R',
     async onClick(context) {
-      console.log('Roll dice clicked/shortcut pressed!', context.items.length, 'items');
       // Roll all selected dice
       const diceItems = context.items.filter(
         (item) => item.metadata['dice-roller/type']
@@ -228,8 +208,6 @@ OBR.onReady(async () => {
       });
     },
   });
-
-  console.log('Context menu created');
 
   // Set up "Roll Selected Dice" button
   const rollButton = document.getElementById('roll-selected');
@@ -268,7 +246,6 @@ OBR.onReady(async () => {
         }
       });
     } catch (error) {
-      console.error('Error rolling dice:', error);
       OBR.notification.show('Error rolling dice', 'ERROR');
     }
   });
