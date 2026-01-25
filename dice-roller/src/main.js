@@ -13,13 +13,14 @@ const DICE_CONFIG = {
 };
 
 // Helper function to get the image URL for a die value
-function getDiceImageUrl(diceType, value) {
-  return `/${diceType}-${value}.svg`;
+function getDiceImageUrl(diceType, value, color = '#888888') {
+  // Use dynamic server endpoint for all dice
+  return `/dice/${diceType}?value=${value}&color=${encodeURIComponent(color)}`;
 }
 
 // Helper function to get absolute URL for a die value
-function getAbsoluteDiceImageUrl(diceType, value) {
-  const imageUrl = getDiceImageUrl(diceType, value);
+function getAbsoluteDiceImageUrl(diceType, value, color = '#888888') {
+  const imageUrl = getDiceImageUrl(diceType, value, color);
   return new URL(imageUrl, window.location.href).href;
 }
 
@@ -84,10 +85,13 @@ OBR.onReady(async () => {
       const diceType = button.dataset.dice;
       const config = DICE_CONFIG[diceType];
       const maxValue = config.maxValue;
-      const imageUrl = getDiceImageUrl(diceType, maxValue);
 
-      // Get absolute URL
-      const absoluteUrl = new URL(imageUrl, window.location.href).href;
+      // Get player color for dynamic dice
+      const playerColor = await OBR.player.getColor();
+      console.log('Player color:', playerColor);
+
+      // Get absolute URL with player color
+      const absoluteUrl = getAbsoluteDiceImageUrl(diceType, maxValue, playerColor);
       console.log('Image URL:', absoluteUrl);
 
       try {
@@ -107,6 +111,7 @@ OBR.onReady(async () => {
           .metadata({
             'dice-roller/type': diceType,
             'dice-roller/value': maxValue,
+            'dice-roller/color': playerColor,
           })
           .build();
 
@@ -165,6 +170,7 @@ OBR.onReady(async () => {
                 .metadata({
                   'dice-roller/type': diceType,
                   'dice-roller/value': maxValue,
+                  'dice-roller/color': playerColor,
                 })
                 .build();
 
@@ -213,9 +219,10 @@ OBR.onReady(async () => {
         for (const die of items) {
           const diceType = die.metadata['dice-roller/type'];
           const newValue = rollDice(diceType);
+          const diceColor = die.metadata['dice-roller/color'] || '#ff6b6b';
 
           // Update the die's image to show the new value
-          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue);
+          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue, diceColor);
           die.metadata['dice-roller/value'] = newValue;
         }
       });
@@ -253,9 +260,10 @@ OBR.onReady(async () => {
         for (const die of items) {
           const diceType = die.metadata['dice-roller/type'];
           const newValue = rollDice(diceType);
+          const diceColor = die.metadata['dice-roller/color'] || '#ff6b6b';
 
           // Update the die's image to show the new value
-          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue);
+          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue, diceColor);
           die.metadata['dice-roller/value'] = newValue;
         }
       });
