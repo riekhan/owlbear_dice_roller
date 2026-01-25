@@ -99,7 +99,7 @@ OBR.onReady(async () => {
           height: 100,
         }, {
           dpi: 100,
-          offset: { x: 50, y: 50 },
+          offset: { x: 0, y: 0 },
         })
           .position({ x: 0, y: 0 })
           .layer('PROP')
@@ -126,10 +126,14 @@ OBR.onReady(async () => {
             y: moveEvent.clientY,
           });
 
-          finalPosition = position;
+          // Adjust position to account for offset
+          finalPosition = {
+            x: position.x,
+            y: position.y + 100,
+          };
 
           update((item) => {
-            item.position = position;
+            item.position = finalPosition;
           });
         };
 
@@ -153,7 +157,7 @@ OBR.onReady(async () => {
                 height: 100,
               }, {
                 dpi: 100,
-                offset: { x: 50, y: 50 },
+                offset: { x: 0, y: 0 },
               })
                 .position(finalPosition)
                 .layer('PROP')

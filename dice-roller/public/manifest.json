@@ -6,7 +6,7 @@
     "title": "Dice Roller",
     "icon": "/icon.svg",
     "popover": "/",
-    "height": 450,
+    "height": 520,
     "width": 80
   }
 }
