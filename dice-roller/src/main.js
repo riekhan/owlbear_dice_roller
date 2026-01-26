@@ -74,12 +74,14 @@ OBR.onReady(async () => {
       finalPosition = null;
       const diceType = button.dataset.dice;
       const config = DICE_CONFIG[diceType];
+
+      // For dragging, show max value (unrolled)
       const maxValue = config.maxValue;
 
       // Get player color for dynamic dice
       const playerColor = await OBR.player.getColor();
 
-      // Get absolute URL with player color
+      // Get absolute URL with player color (using max value for drag preview)
       const absoluteUrl = getAbsoluteDiceImageUrl(diceType, maxValue, playerColor);
 
       try {
@@ -132,7 +134,7 @@ OBR.onReady(async () => {
           if (interaction) {
             stop();
 
-            // If we dragged, add the die to the scene
+            // If we dragged, add the die to the scene at drag position (unrolled, max value)
             if (isDragging && finalPosition) {
               const finalDie = buildImage({
                 url: absoluteUrl,
@@ -149,6 +151,39 @@ OBR.onReady(async () => {
                 .metadata({
                   'dice-roller/type': diceType,
                   'dice-roller/value': maxValue,
+                  'dice-roller/color': playerColor,
+                })
+                .build();
+
+              await OBR.scene.items.addItems([finalDie]);
+            } else if (!isDragging) {
+              // If we clicked (not dragged), roll the die and spawn at viewport center
+              const rolledValue = rollDice(diceType);
+              const rolledUrl = getAbsoluteDiceImageUrl(diceType, rolledValue, playerColor);
+
+              // Get the center of the player's current viewport
+              const width = await OBR.viewport.getWidth();
+              const height = await OBR.viewport.getHeight();
+              const centerPosition = await OBR.viewport.inverseTransformPoint({
+                x: width / 2,
+                y: height / 2,
+              });
+
+              const finalDie = buildImage({
+                url: rolledUrl,
+                mime: 'image/svg+xml',
+                width: 100,
+                height: 100,
+              }, {
+                dpi: 100,
+                offset: { x: 0, y: 0 },
+              })
+                .position(centerPosition)
+                .layer('PROP')
+                .locked(false)
+                .metadata({
+                  'dice-roller/type': diceType,
+                  'dice-roller/value': rolledValue,
                   'dice-roller/color': playerColor,
                 })
                 .build();
