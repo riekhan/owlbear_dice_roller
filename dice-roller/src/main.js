@@ -62,6 +62,13 @@ async function addDieToScene(diceType, position) {
 
 // Initialize the extension
 OBR.onReady(async () => {
+  // Track click-spawn state for offsetting multiple dice
+  let clickSpawnCount = 0;
+  let lastSpawnTime = 0;
+  let lastViewportCenter = null;
+  const SPAWN_COOLDOWN = 3000; // 3 seconds - reset if no spawns within this time
+  const SPAWN_OFFSET = 120; // Offset distance between dice
+
   const diceButtons = document.querySelectorAll('.dice-button');
 
   diceButtons.forEach((button) => {
@@ -169,6 +176,36 @@ OBR.onReady(async () => {
                 y: height / 2,
               });
 
+              const now = Date.now();
+
+              // Check if we should reset the spawn count
+              const timeSinceLastSpawn = now - lastSpawnTime;
+              const viewportMoved = lastViewportCenter &&
+                (Math.abs(centerPosition.x - lastViewportCenter.x) > 50 ||
+                 Math.abs(centerPosition.y - lastViewportCenter.y) > 50);
+
+              if (timeSinceLastSpawn > SPAWN_COOLDOWN || viewportMoved) {
+                clickSpawnCount = 0;
+              }
+
+              // Calculate offset in a circular pattern around center
+              // Creates concentric rings: first die at center, then rings of 6 dice each
+              let offsetX = 0;
+              let offsetY = 0;
+              if (clickSpawnCount > 0) {
+                const ringIndex = Math.floor((clickSpawnCount - 1) / 6); // Which ring (0, 1, 2...)
+                const positionInRing = (clickSpawnCount - 1) % 6; // Position within the ring (0-5)
+                const radius = (ringIndex + 1) * SPAWN_OFFSET; // Radius increases with each ring
+                const angle = positionInRing * (Math.PI / 3); // 60 degrees apart (6 positions per ring)
+                offsetX = Math.cos(angle) * radius;
+                offsetY = Math.sin(angle) * radius;
+              }
+
+              const spawnPosition = {
+                x: centerPosition.x + offsetX,
+                y: centerPosition.y + offsetY,
+              };
+
               const finalDie = buildImage({
                 url: rolledUrl,
                 mime: 'image/svg+xml',
@@ -178,7 +215,7 @@ OBR.onReady(async () => {
                 dpi: 100,
                 offset: { x: 0, y: 0 },
               })
-                .position(centerPosition)
+                .position(spawnPosition)
                 .layer('PROP')
                 .locked(false)
                 .metadata({
@@ -189,6 +226,11 @@ OBR.onReady(async () => {
                 .build();
 
               await OBR.scene.items.addItems([finalDie]);
+
+              // Update spawn tracking
+              clickSpawnCount++;
+              lastSpawnTime = now;
+              lastViewportCenter = { x: centerPosition.x, y: centerPosition.y };
             }
 
             interaction = null;
