@@ -30,36 +30,6 @@ function rollDice(diceType) {
   return Math.floor(Math.random() * config.sides) + 1;
 }
 
-// Helper function to add a die to the scene
-async function addDieToScene(diceType, position) {
-  const config = DICE_CONFIG[diceType];
-  const maxValue = config.maxValue;
-  const imageUrl = getDiceImageUrl(diceType, maxValue);
-
-  // Get the absolute URL for the image
-  const absoluteUrl = new URL(imageUrl, window.location.href).href;
-
-  const dieItem = buildImage({
-    url: absoluteUrl,
-    mime: 'image/svg+xml',
-    width: 100,
-    height: 100,
-  }, {
-    dpi: 100,
-    offset: { x: 50, y: 50 },
-  })
-    .position(position)
-    .layer('PROP')
-    .locked(false)
-    .metadata({
-      'dice-roller/type': diceType,
-      'dice-roller/value': maxValue,
-    })
-    .build();
-
-  await OBR.scene.items.addItems([dieItem]);
-}
-
 // Initialize the extension
 OBR.onReady(async () => {
   // Track click-spawn state for offsetting multiple dice
