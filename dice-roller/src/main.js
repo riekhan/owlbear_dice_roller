@@ -14,7 +14,6 @@ const DICE_CONFIG = {
 
 // Helper function to get the image URL for a die value
 function getDiceImageUrl(diceType, value, color = '#888888') {
-  // Use dynamic server endpoint for all dice
   return `/dice/${diceType}?value=${value}&color=${encodeURIComponent(color)}`;
 }
 
@@ -58,7 +57,7 @@ OBR.onReady(async () => {
       // Get player color for dynamic dice
       const playerColor = await OBR.player.getColor();
 
-      // Get absolute URL with player color (using max value for drag preview)
+      // Get data URI with player color (using max value for drag preview)
       const absoluteUrl = getAbsoluteDiceImageUrl(diceType, maxValue, playerColor);
 
       try {
