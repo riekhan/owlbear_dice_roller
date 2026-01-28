@@ -8,6 +8,17 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// CORS middleware for all routes
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://www.owlbear.rodeo');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Wireframe data for dynamic SVG generation
 const wireframes = {
   d4: `<g transform="translate(1240.5, 1754) scale(1.1) translate(-1240.5, -1754)"><g transform="matrix(4.05761,0,0,4.05761,-3397.86,-4912.41)">
