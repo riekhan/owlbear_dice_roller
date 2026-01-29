@@ -75,22 +75,22 @@ function resetDicePool() {
 
 // Spawn offset configuration
 const SPAWN_OFFSET = 120; // Offset distance between dice
+const GRID_COLUMNS = 4; // Number of columns in spawn grid
 
 // Calculate spawn position offset for a given index in the spawn sequence
-// Creates concentric rings: first die at center, then rings of 6 dice each
+// Creates a grid pattern with GRID_COLUMNS columns, centered horizontally
 function calculateSpawnOffset(spawnIndex) {
-  if (spawnIndex === 0) {
-    return { x: 0, y: 0 };
-  }
+  const column = spawnIndex % GRID_COLUMNS;
+  const row = Math.floor(spawnIndex / GRID_COLUMNS);
 
-  const ringIndex = Math.floor((spawnIndex - 1) / 6); // Which ring (0, 1, 2...)
-  const positionInRing = (spawnIndex - 1) % 6; // Position within the ring (0-5)
-  const radius = (ringIndex + 1) * SPAWN_OFFSET; // Radius increases with each ring
-  const angle = positionInRing * (Math.PI / 3); // 60 degrees apart (6 positions per ring)
+  // Center the grid horizontally (offset so middle of grid is at center)
+  const gridWidth = (GRID_COLUMNS - 1) * SPAWN_OFFSET;
+  const xOffset = column * SPAWN_OFFSET - gridWidth / 2;
+  const yOffset = row * SPAWN_OFFSET;
 
   return {
-    x: Math.cos(angle) * radius,
-    y: Math.sin(angle) * radius,
+    x: xOffset,
+    y: yOffset,
   };
 }
 
