@@ -131,10 +131,10 @@ OBR.onReady(async () => {
         const tempDie = buildImage({
           url: absoluteUrl,
           mime: 'image/svg+xml',
-          width: 100,
-          height: 100,
+          width: 1000,
+          height: 1000,
         }, {
-          dpi: 100,
+          dpi: 1000,
           offset: { x: 0, y: 0 },
         })
           .position({ x: 0, y: 0 })
@@ -189,10 +189,10 @@ OBR.onReady(async () => {
               const finalDie = buildImage({
                 url: absoluteUrl,
                 mime: 'image/svg+xml',
-                width: 100,
-                height: 100,
+                width: 1000,
+                height: 1000,
               }, {
-                dpi: 100,
+                dpi: 1000,
                 offset: { x: 0, y: 0 },
               })
                 .position(finalPosition)
@@ -305,10 +305,10 @@ OBR.onReady(async () => {
             const die = buildImage({
               url: rolledUrl,
               mime: 'image/svg+xml',
-              width: 100,
-              height: 100,
+              width: 1000,
+              height: 1000,
             }, {
-              dpi: 100,
+              dpi: 1000,
               offset: { x: 0, y: 0 },
             })
               .position(spawnPosition)

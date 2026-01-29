@@ -55,7 +55,7 @@ app.get('/dice/:diceType', (req, res) => {
     return res.status(404).send('Dice type not found');
   }
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 2481 3508">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 2481 3508">
   <rect x="-393.5" y="120" width="3268" height="3268" rx="1200" ry="1200" fill="black"/>
   <rect x="-393.5" y="120" width="3268" height="3268" rx="1200" ry="1200" fill="none" stroke="${color}" stroke-width="200"/>
   ${wireframe}
