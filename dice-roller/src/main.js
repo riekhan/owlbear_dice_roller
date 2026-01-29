@@ -12,6 +12,17 @@ const DICE_CONFIG = {
   d100: { sides: 100, maxValue: 100 }, // d100 rolls 1-100
 };
 
+// Dice pool state - tracks how many of each die type to roll
+const dicePool = {
+  d4: 0,
+  d6: 0,
+  d8: 0,
+  d10: 0,
+  d12: 0,
+  d20: 0,
+  d100: 0,
+};
+
 // Helper function to get the image URL for a die value
 function getDiceImageUrl(diceType, value, color = '#888888') {
   return `/dice/${diceType}?value=${value}&color=${encodeURIComponent(color)}`;
@@ -29,25 +40,77 @@ function rollDice(diceType) {
   return Math.floor(Math.random() * config.sides) + 1;
 }
 
+// Update the badge display for a die type
+function updateDiceCountDisplay(diceType) {
+  const badge = document.querySelector(`.dice-count[data-count="${diceType}"]`);
+  if (badge) {
+    const count = dicePool[diceType];
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.add('visible');
+    } else {
+      badge.textContent = '';
+      badge.classList.remove('visible');
+    }
+  }
+}
+
+// Check if there are any dice in the pool
+function hasPoolDice() {
+  return Object.values(dicePool).some((count) => count > 0);
+}
+
+// Get total count of dice in pool
+function getTotalPoolCount() {
+  return Object.values(dicePool).reduce((sum, count) => sum + count, 0);
+}
+
+// Reset all dice pool counts to zero
+function resetDicePool() {
+  for (const diceType of Object.keys(dicePool)) {
+    dicePool[diceType] = 0;
+    updateDiceCountDisplay(diceType);
+  }
+}
+
+// Spawn offset configuration
+const SPAWN_OFFSET = 120; // Offset distance between dice
+
+// Calculate spawn position offset for a given index in the spawn sequence
+// Creates concentric rings: first die at center, then rings of 6 dice each
+function calculateSpawnOffset(spawnIndex) {
+  if (spawnIndex === 0) {
+    return { x: 0, y: 0 };
+  }
+
+  const ringIndex = Math.floor((spawnIndex - 1) / 6); // Which ring (0, 1, 2...)
+  const positionInRing = (spawnIndex - 1) % 6; // Position within the ring (0-5)
+  const radius = (ringIndex + 1) * SPAWN_OFFSET; // Radius increases with each ring
+  const angle = positionInRing * (Math.PI / 3); // 60 degrees apart (6 positions per ring)
+
+  return {
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius,
+  };
+}
+
 // Initialize the extension
 OBR.onReady(async () => {
-  // Track click-spawn state for offsetting multiple dice
-  let clickSpawnCount = 0;
-  let lastSpawnTime = 0;
-  let lastViewportCenter = null;
-  const SPAWN_COOLDOWN = 3000; // 3 seconds - reset if no spawns within this time
-  const SPAWN_OFFSET = 120; // Offset distance between dice
-
   const diceButtons = document.querySelectorAll('.dice-button');
 
   diceButtons.forEach((button) => {
-    let interaction = null;
     let isDragging = false;
-    let finalPosition = null;
+    let dragStartPos = null;
+    const DRAG_THRESHOLD = 5; // Pixels to move before considered a drag
+
+    // Prevent context menu on right-click
+    button.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
 
     button.addEventListener('pointerdown', async (e) => {
       isDragging = false;
-      finalPosition = null;
+      dragStartPos = { x: e.clientX, y: e.clientY };
       const diceType = button.dataset.dice;
       const config = DICE_CONFIG[diceType];
 
@@ -59,6 +122,9 @@ OBR.onReady(async () => {
 
       // Get data URI with player color (using max value for drag preview)
       const absoluteUrl = getAbsoluteDiceImageUrl(diceType, maxValue, playerColor);
+
+      let interaction = null;
+      let finalPosition = null;
 
       try {
         // Create a temporary die item for dragging
@@ -81,26 +147,34 @@ OBR.onReady(async () => {
           })
           .build();
 
-        // Start interaction
+        // Start interaction (for drag preview)
         interaction = await OBR.interaction.startItemInteraction(tempDie);
         const [update, stop] = interaction;
 
         const onPointerMove = async (moveEvent) => {
-          isDragging = true;
-          const position = await OBR.viewport.inverseTransformPoint({
-            x: moveEvent.clientX,
-            y: moveEvent.clientY,
-          });
+          // Check if we've moved enough to be considered a drag
+          const dx = moveEvent.clientX - dragStartPos.x;
+          const dy = moveEvent.clientY - dragStartPos.y;
+          if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+            isDragging = true;
+          }
 
-          // Adjust position to account for offset
-          finalPosition = {
-            x: position.x,
-            y: position.y + 100,
-          };
+          if (isDragging) {
+            const position = await OBR.viewport.inverseTransformPoint({
+              x: moveEvent.clientX,
+              y: moveEvent.clientY,
+            });
 
-          update((item) => {
-            item.position = finalPosition;
-          });
+            // Adjust position to account for offset
+            finalPosition = {
+              x: position.x,
+              y: position.y + 100,
+            };
+
+            update((item) => {
+              item.position = finalPosition;
+            });
+          }
         };
 
         const onPointerUp = async () => {
@@ -133,73 +207,18 @@ OBR.onReady(async () => {
 
               await OBR.scene.items.addItems([finalDie]);
             } else if (!isDragging) {
-              // If we clicked (not dragged), roll the die and spawn at viewport center
-              const rolledValue = rollDice(diceType);
-              const rolledUrl = getAbsoluteDiceImageUrl(diceType, rolledValue, playerColor);
-
-              // Get the center of the player's current viewport
-              const width = await OBR.viewport.getWidth();
-              const height = await OBR.viewport.getHeight();
-              const centerPosition = await OBR.viewport.inverseTransformPoint({
-                x: width / 2,
-                y: height / 2,
-              });
-
-              const now = Date.now();
-
-              // Check if we should reset the spawn count
-              const timeSinceLastSpawn = now - lastSpawnTime;
-              const viewportMoved = lastViewportCenter &&
-                (Math.abs(centerPosition.x - lastViewportCenter.x) > 50 ||
-                 Math.abs(centerPosition.y - lastViewportCenter.y) > 50);
-
-              if (timeSinceLastSpawn > SPAWN_COOLDOWN || viewportMoved) {
-                clickSpawnCount = 0;
+              // If we clicked (not dragged), update the dice pool
+              if (e.button === 2) {
+                // Right click - decrement
+                if (dicePool[diceType] > 0) {
+                  dicePool[diceType]--;
+                  updateDiceCountDisplay(diceType);
+                }
+              } else {
+                // Left click - increment
+                dicePool[diceType]++;
+                updateDiceCountDisplay(diceType);
               }
-
-              // Calculate offset in a circular pattern around center
-              // Creates concentric rings: first die at center, then rings of 6 dice each
-              let offsetX = 0;
-              let offsetY = 0;
-              if (clickSpawnCount > 0) {
-                const ringIndex = Math.floor((clickSpawnCount - 1) / 6); // Which ring (0, 1, 2...)
-                const positionInRing = (clickSpawnCount - 1) % 6; // Position within the ring (0-5)
-                const radius = (ringIndex + 1) * SPAWN_OFFSET; // Radius increases with each ring
-                const angle = positionInRing * (Math.PI / 3); // 60 degrees apart (6 positions per ring)
-                offsetX = Math.cos(angle) * radius;
-                offsetY = Math.sin(angle) * radius;
-              }
-
-              const spawnPosition = {
-                x: centerPosition.x + offsetX,
-                y: centerPosition.y + offsetY,
-              };
-
-              const finalDie = buildImage({
-                url: rolledUrl,
-                mime: 'image/svg+xml',
-                width: 100,
-                height: 100,
-              }, {
-                dpi: 100,
-                offset: { x: 0, y: 0 },
-              })
-                .position(spawnPosition)
-                .layer('PROP')
-                .locked(false)
-                .metadata({
-                  'dice-roller/type': diceType,
-                  'dice-roller/value': rolledValue,
-                  'dice-roller/color': playerColor,
-                })
-                .build();
-
-              await OBR.scene.items.addItems([finalDie]);
-
-              // Update spawn tracking
-              clickSpawnCount++;
-              lastSpawnTime = now;
-              lastViewportCenter = { x: centerPosition.x, y: centerPosition.y };
             }
 
             interaction = null;
@@ -251,42 +270,103 @@ OBR.onReady(async () => {
     },
   });
 
-  // Set up "Roll Selected Dice" button
+  // Set up "Roll Selected Dice" / "Roll Pool" button
   const rollButton = document.getElementById('roll-selected');
   rollButton.addEventListener('click', async () => {
     try {
-      // Get all selected items
-      const selection = await OBR.player.getSelection();
-      if (!selection || selection.length === 0) {
-        OBR.notification.show('No dice selected!', 'WARNING');
-        return;
-      }
+      // Check if there are dice in the pool
+      if (hasPoolDice()) {
+        // Spawn and roll dice from the pool
+        const playerColor = await OBR.player.getColor();
 
-      // Get the actual items
-      const items = await OBR.scene.items.getItems(selection);
+        // Get the center of the player's current viewport
+        const width = await OBR.viewport.getWidth();
+        const height = await OBR.viewport.getHeight();
+        const centerPosition = await OBR.viewport.inverseTransformPoint({
+          x: width / 2,
+          y: height / 2,
+        });
 
-      // Filter for dice items
-      const diceItems = items.filter(
-        (item) => item.metadata && item.metadata['dice-roller/type']
-      );
+        // Build all dice to spawn
+        const diceToSpawn = [];
+        let spawnIndex = 0;
 
-      if (diceItems.length === 0) {
-        OBR.notification.show('No dice selected!', 'WARNING');
-        return;
-      }
+        for (const [diceType, count] of Object.entries(dicePool)) {
+          for (let i = 0; i < count; i++) {
+            const rolledValue = rollDice(diceType);
+            const rolledUrl = getAbsoluteDiceImageUrl(diceType, rolledValue, playerColor);
 
-      // Roll the dice
-      await OBR.scene.items.updateItems(diceItems, (items) => {
-        for (const die of items) {
-          const diceType = die.metadata['dice-roller/type'];
-          const newValue = rollDice(diceType);
-          const diceColor = die.metadata['dice-roller/color'] || '#ff6b6b';
+            const offset = calculateSpawnOffset(spawnIndex);
+            const spawnPosition = {
+              x: centerPosition.x + offset.x,
+              y: centerPosition.y + offset.y,
+            };
 
-          // Update the die's image to show the new value
-          die.image.url = getAbsoluteDiceImageUrl(diceType, newValue, diceColor);
-          die.metadata['dice-roller/value'] = newValue;
+            const die = buildImage({
+              url: rolledUrl,
+              mime: 'image/svg+xml',
+              width: 100,
+              height: 100,
+            }, {
+              dpi: 100,
+              offset: { x: 0, y: 0 },
+            })
+              .position(spawnPosition)
+              .layer('PROP')
+              .locked(false)
+              .metadata({
+                'dice-roller/type': diceType,
+                'dice-roller/value': rolledValue,
+                'dice-roller/color': playerColor,
+              })
+              .build();
+
+            diceToSpawn.push(die);
+            spawnIndex++;
+          }
         }
-      });
+
+        // Add all dice at once
+        if (diceToSpawn.length > 0) {
+          await OBR.scene.items.addItems(diceToSpawn);
+        }
+
+        // Reset the dice pool
+        resetDicePool();
+      } else {
+        // No dice in pool - roll selected dice on scene (original behavior)
+        const selection = await OBR.player.getSelection();
+        if (!selection || selection.length === 0) {
+          OBR.notification.show('No dice selected!', 'WARNING');
+          return;
+        }
+
+        // Get the actual items
+        const items = await OBR.scene.items.getItems(selection);
+
+        // Filter for dice items
+        const diceItems = items.filter(
+          (item) => item.metadata && item.metadata['dice-roller/type']
+        );
+
+        if (diceItems.length === 0) {
+          OBR.notification.show('No dice selected!', 'WARNING');
+          return;
+        }
+
+        // Roll the dice
+        await OBR.scene.items.updateItems(diceItems, (items) => {
+          for (const die of items) {
+            const diceType = die.metadata['dice-roller/type'];
+            const newValue = rollDice(diceType);
+            const diceColor = die.metadata['dice-roller/color'] || '#ff6b6b';
+
+            // Update the die's image to show the new value
+            die.image.url = getAbsoluteDiceImageUrl(diceType, newValue, diceColor);
+            die.metadata['dice-roller/value'] = newValue;
+          }
+        });
+      }
     } catch (error) {
       OBR.notification.show('Error rolling dice', 'ERROR');
     }
