@@ -5,14 +5,25 @@ A dice roller extension for [Owlbear Rodeo](https://www.owlbear.rodeo) that lets
 ## Features
 
 - **7 Dice Types**: d4, d6, d8, d10, d12, d20, d100
-- **Two Spawn Methods**:
-  - **Click**: Instantly spawn a rolled die at the center of your view
-  - **Drag**: Place an unrolled die precisely where you want it
-- **Smart Positioning**: Multiple quick clicks create a neat circular pattern
+- **Dice Pool**: Build up a set of dice to roll together
+  - **Left-click** a die button to add it to the pool
+  - **Right-click** to remove one from the pool
+  - Small badge shows count on each die button
+- **Drag to Place**: Drag a die button to place an unrolled die precisely on the scene
+- **Smart Positioning**: Dice spawn in a 4-column grid pattern
 - **Player Colors**: Dice borders match your Owlbear Rodeo player color
 - **Multiple Roll Options**: Right-click menu, "Roll Selected" button
+- **Remove All**: Quick button to clear all dice from the scene
+
+## Live Version
+
+**Production**: https://owlbear-dice-roller.fly.dev/manifest.json
 
 ## Installation
+
+### For Users
+1. In Owlbear Rodeo, go to Extensions → Add Extension
+2. Enter: `https://owlbear-dice-roller.fly.dev/manifest.json`
 
 ### For Development
 1. Clone this repository
@@ -27,21 +38,27 @@ A dice roller extension for [Owlbear Rodeo](https://www.owlbear.rodeo) that lets
 4. In Owlbear Rodeo, go to Extensions → Add Extension
 5. Enter: `http://localhost:5173/manifest.json`
 
-### For Production
-TODO: Add production build instructions
+### Deployment
+```bash
+fly deploy
+```
 
 ## Usage
 
-### Spawning Dice
-- **Click a die button**: Spawns a rolled die at the center of your viewport
-- **Drag a die button**: Place an unrolled die anywhere on the scene
+### Building a Dice Pool
+- **Left-click** die buttons to add dice to your pool (badge shows count)
+- **Right-click** to remove dice from the pool
+- Click **"Roll Selected"** to roll and spawn all dice in the pool
 
-### Rolling Dice
+### Placing Individual Dice
+- **Drag** a die button onto the scene to place an unrolled die
+
+### Rolling Existing Dice
 - **Right-click** on dice → "Roll Dice"
-- **Select dice** and click the "Roll Selected" button in the extension panel
+- **Select dice** and click the "Roll Selected" button
 
-### Quick Rolling Multiple Dice
-Click die buttons rapidly to spawn multiple rolled dice in a neat circular pattern around the center. The pattern resets if you wait 3+ seconds or move your view.
+### Removing Dice
+- Click **"Remove All"** to clear all dice from the scene
 
 ## How It Works
 

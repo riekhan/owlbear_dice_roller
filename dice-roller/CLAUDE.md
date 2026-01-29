@@ -1,7 +1,13 @@
 # Dice Roller - Owlbear Rodeo Extension
 
 ## Overview
-A dice roller extension for Owlbear Rodeo with dynamic SVG generation, click/drag spawning, and automatic rolling features.
+A dice roller extension for Owlbear Rodeo with dynamic SVG generation, dice pool building, and drag-to-place spawning.
+
+## Deployment
+
+- **Production URL**: https://owlbear-dice-roller.fly.dev
+- **Manifest**: https://owlbear-dice-roller.fly.dev/manifest.json
+- **Deploy command**: `fly deploy`
 
 ## Current Features
 
@@ -9,26 +15,45 @@ A dice roller extension for Owlbear Rodeo with dynamic SVG generation, click/dra
 - **7 Dice Types**: d4, d6, d8, d10, d12, d20, d100
 - **d100 behavior**: Rolls 1-100 (not increments of 10)
 
+### Dice Pool System
+- **Left-click** a die button to increment that die's count in the pool
+- **Right-click** a die button to decrement (minimum 0)
+- **Badge display**: Small red badge in top-left corner shows count when > 0
+- **Roll button**: When pool has dice, "Roll Selected" spawns and rolls all pool dice, then resets pool
+- **Fallback**: When pool is empty, "Roll Selected" rolls selected dice on the scene (original behavior)
+
 ### Spawn Behaviors
-1. **Click Spawn** (Quick Roll):
-   - Click a die button to spawn a rolled die at viewport center
-   - Automatic roll on spawn
-   - Multiple quick clicks create concentric ring pattern:
-     - Die 1: Center
-     - Dice 2-7: First ring (6 dice, 120px radius)
-     - Dice 8-13: Second ring (6 dice, 240px radius)
-     - Continues expanding with 6 dice per ring
-   - Pattern resets after 3 seconds or if viewport moves >50px
+1. **Pool Spawn** (via Roll Selected button):
+   - Builds dice from pool counts
+   - Spawns in a 4-column grid pattern centered on viewport
+   - All dice are rolled automatically
+   - Pool resets to zero after spawning
 
 2. **Drag Spawn** (Unrolled):
    - Drag die button to place on scene
    - Spawns showing max value (unrolled)
    - Must manually roll later using context menu or Roll Selected button
 
+### Spawn Grid Pattern
+Dice spawn in a 4-column grid, centered horizontally:
+```
+[1] [2] [3] [4]
+[5] [6] [7] [8]
+[9] ...
+```
+- `SPAWN_OFFSET = 120` pixels between dice
+- `GRID_COLUMNS = 4` columns per row
+- Grid is horizontally centered on viewport
+
 ### Rolling Mechanisms
 - **Context Menu**: Right-click dice → "Roll Dice"
-- **Roll Selected Button**: Click button in tray to roll all selected dice
-- **Note**: Keyboard shortcut 'R' is configured but may not work (OBR limitation)
+- **Roll Selected Button**:
+  - If pool has dice: spawns pool dice
+  - If pool empty: rolls selected dice on scene
+
+### Remove All Dice
+- **Remove All Button**: Deletes all dice items from the scene
+- Shows notification with count of removed dice
 
 ### Visual Design
 - **Black background** with colored rounded square border
@@ -43,19 +68,21 @@ A dice roller extension for Owlbear Rodeo with dynamic SVG generation, click/dra
 dice-roller/
 ├── public/
 │   ├── manifest.json          # Extension manifest
-│   └── icon.svg                # Extension icon
+│   └── icon.svg               # Extension icon
 ├── src/
-│   ├── main.js                 # Main extension logic
-│   └── style.css               # UI styles (80x520px vertical tray)
-├── index.html                  # Extension UI (7 die buttons + Roll Selected button)
-├── vite.config.js              # Vite config with dynamic SVG middleware
-└── package.json                # Dependencies
+│   ├── main.js                # Main extension logic
+│   └── style.css              # UI styles
+├── index.html                 # Extension UI (7 die buttons + badges + buttons)
+├── vite.config.js             # Vite config with dynamic SVG middleware
+├── Dockerfile                 # Production container
+├── fly.toml                   # Fly.io deployment config
+└── package.json               # Dependencies
 ```
 
 ### Dynamic SVG Generation (vite.config.js)
 - **Custom Vite middleware plugin** (`dynamicDicePlugin`)
 - Serves SVGs via `/dice/{diceType}?value={value}&color={color}` endpoints
-- **Wireframes**: Complex path data embedded in config (from newsvgs folder, now deleted)
+- **Wireframes**: Complex path data embedded in config
 - **Scaling**: Wireframes scaled 1.1x (10% larger) for prominence
 - **SVG Structure**:
   - Black rounded rectangle background (3268x3268, rx=1200, ry=1200)
@@ -70,6 +97,7 @@ dice-roller/
 - **Pointer Events**: Drag/click detection
 - **OBR Interaction API**: Real-time item dragging
 - **Context Menu API**: Right-click menu for rolling
+- **Fly.io**: Production hosting
 
 ### Core Logic
 
@@ -86,33 +114,33 @@ const DICE_CONFIG = {
 };
 ```
 
-#### Spawn Flow
-1. **pointerdown**: Start tracking, create temp die with max value
-2. **pointermove**: If drag detected, update position using `OBR.viewport.inverseTransformPoint()`
-3. **pointerup**:
-   - **If dragged**: Spawn die at drag position with max value (unrolled)
-   - **If not dragged**: Roll die, spawn at viewport center with offset pattern
-
-#### Click-Spawn Offset Logic
+#### Dice Pool State
 ```javascript
-// Track spawn state
-let clickSpawnCount = 0;
-let lastSpawnTime = 0;
-let lastViewportCenter = null;
-const SPAWN_COOLDOWN = 3000; // Reset after 3 seconds
-const SPAWN_OFFSET = 120; // Base radius
-
-// Reset conditions
-if (timeSinceLastSpawn > SPAWN_COOLDOWN || viewportMoved) {
-  clickSpawnCount = 0;
-}
-
-// Calculate concentric ring position
-const ringIndex = Math.floor((clickSpawnCount - 1) / 6); // Which ring
-const positionInRing = (clickSpawnCount - 1) % 6; // Position in ring
-const radius = (ringIndex + 1) * SPAWN_OFFSET;
-const angle = positionInRing * (Math.PI / 3); // 60 degrees apart
+const dicePool = {
+  d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0, d100: 0,
+};
 ```
+
+#### Spawn Grid Offset Calculation
+```javascript
+const SPAWN_OFFSET = 120;
+const GRID_COLUMNS = 4;
+
+function calculateSpawnOffset(spawnIndex) {
+  const column = spawnIndex % GRID_COLUMNS;
+  const row = Math.floor(spawnIndex / GRID_COLUMNS);
+  const gridWidth = (GRID_COLUMNS - 1) * SPAWN_OFFSET;
+  const xOffset = column * SPAWN_OFFSET - gridWidth / 2;
+  const yOffset = row * SPAWN_OFFSET;
+  return { x: xOffset, y: yOffset };
+}
+```
+
+#### Click/Drag Detection
+- Uses `DRAG_THRESHOLD = 5` pixels to distinguish click from drag
+- `pointerdown` → `pointermove` → `pointerup` event flow
+- If movement < threshold: treat as click (update pool)
+- If movement >= threshold: treat as drag (place die)
 
 #### Metadata Schema
 ```javascript
@@ -130,10 +158,11 @@ const angle = positionInRing * (Math.PI / 3); // 60 degrees apart
 - `OBR.viewport.getWidth()` / `getHeight()` - Viewport dimensions for centering
 - `OBR.scene.items.addItems()` - Add dice to scene
 - `OBR.scene.items.updateItems()` - Update dice values when rolling
-- `OBR.scene.items.getItems()` - Fetch selected items
+- `OBR.scene.items.getItems()` - Fetch items
+- `OBR.scene.items.deleteItems()` - Remove dice from scene
 - `OBR.player.getSelection()` - Get selected items for Roll Selected button
 - `OBR.player.getColor()` - Get player's color for die borders
-- `OBR.contextMenu.create()` - Context menu with shortcut
+- `OBR.contextMenu.create()` - Context menu for rolling
 - `OBR.notification.show()` - User feedback
 - `buildImage()` - Create image items
 
@@ -141,6 +170,11 @@ const angle = positionInRing * (Math.PI / 3); // 60 degrees apart
 - `getDiceImageUrl(diceType, value, color)` - Builds relative URL for Vite endpoint
 - `getAbsoluteDiceImageUrl(diceType, value, color)` - Converts to absolute URL (required for OBR)
 - `rollDice(diceType)` - Generates random roll value based on die type
+- `updateDiceCountDisplay(diceType)` - Updates badge visibility and text
+- `hasPoolDice()` - Returns true if any dice in pool
+- `getTotalPoolCount()` - Returns sum of all pool counts
+- `resetDicePool()` - Sets all pool counts to zero
+- `calculateSpawnOffset(spawnIndex)` - Returns {x, y} offset for grid position
 
 ## Development Setup
 
@@ -151,10 +185,15 @@ npm install
 npm run dev
 ```
 
-### Add to Owlbear Rodeo
+### Add to Owlbear Rodeo (Dev)
 1. Go to https://www.owlbear.rodeo
 2. Extensions → Add Extension
 3. Paste: `http://localhost:5173/manifest.json`
+
+### Deployment
+```bash
+fly deploy
+```
 
 ### Dependencies
 - `vite@5` - Build tool
@@ -163,37 +202,45 @@ npm run dev
 ## Design Decisions & History
 
 ### Evolution of Dice Rendering
-1. **Initial**: Static SVG files for each die value (d6-1.svg through d6-6.svg)
+1. **Initial**: Static SVG files for each die value
 2. **Dynamic Generation**: Vite plugin generates SVGs on-the-fly with query params
-3. **Wireframe Redesign**: Replaced simple shapes with complex 3D wireframes from newsvgs folder
+3. **Wireframe Redesign**: Replaced simple shapes with complex 3D wireframes
 4. **Consolidated**: Removed all static SVG files, use only Vite plugin
 
 ### Why Dynamic SVG Generation?
 - **Player colors**: Each player's dice use their OBR player color
 - **No static files**: Reduces file count from ~100+ to just wireframe data in config
-- **Flexibility**: Easy to adjust styling (border, text, colors) without regenerating files
+- **Flexibility**: Easy to adjust styling without regenerating files
 
-### Click vs Drag Spawn Design
-- **Click spawn = convenience**: Quick way to roll and spawn at center
-- **Drag spawn = precision**: Place unrolled dice exactly where needed
-- **Concentric rings**: Prevents stacking when rapidly clicking
+### Dice Pool Design
+- **Build then roll**: Users wanted to build sets like "3d6 + 1d20" before rolling
+- **Left/right click**: Intuitive increment/decrement without extra UI
+- **Badges**: Visual feedback showing pool state at a glance
+
+### Grid vs Ring Pattern
+- Originally used concentric rings (60° apart)
+- Changed to 4-column grid for better readability with many dice
+- Grid is easier to scan and count
 
 ## Current Status
 
-### Working Features ✓
+### Working Features
 - All 7 dice types functional
-- Click-spawn with automatic roll and offset pattern
-- Drag-spawn with manual roll required
+- Dice pool with increment/decrement
+- Badge display for pool counts
+- Grid spawn pattern (4 columns)
+- Drag-spawn for precise placement
 - Context menu rolling
-- Roll Selected button
+- Roll Selected button (pool or selected dice)
+- Remove All button
 - Player-colored dice borders
 - Dynamic SVG generation
 
 ### Known Limitations
-- Keyboard shortcut 'R' may not work (OBR API limitation)
 - No animations (instant value changes)
 - No sound effects
 - No roll history or totals
+- No dice presets/saving
 
 ## Future Enhancements
 
@@ -201,7 +248,7 @@ npm run dev
 1. **Animations**: Dice rotation/spin when rolling
 2. **Sound effects**: Dice rolling sounds
 3. **Roll history**: Show recent rolls in panel
-4. **Dice pools**: Show total of selected dice
+4. **Dice totals**: Show sum of selected/rolled dice
 5. **Custom colors**: Let users override die colors
 6. **Dice presets**: Save common combinations (e.g., "2d6+1d4")
 7. **Roll modifiers**: Add +/- values to rolls
@@ -211,13 +258,8 @@ npm run dev
 - Use browser DevTools console for debugging (check iframe context)
 - Absolute URLs required for images in OBR's HTTPS context
 - Test with multiple players to see different colored dice
-
-## Code Cleanup Done
-- Removed unused `counter.js` file (Vite template leftover)
-- Removed unused `addDieToScene()` function from main.js
-- Removed all static SVG files (d4-4.svg through d100-90.svg)
-- Removed `newsvgs` folder (wireframes now in vite.config.js)
-- No unused dependencies in package.json
+- Check "Disable cache" in DevTools Network tab when testing image changes
+- buildImage `width`/`height` should match SVG dimensions; `dpi` controls display size
 
 ## Summary
-Fully functional dice roller with sophisticated spawn behaviors. Click for quick rolls at center (with smart offsetting), drag for precise placement. Dynamic SVG generation provides player-colored dice with detailed wireframe designs. Ready for use in Owlbear Rodeo games.
+Fully functional dice roller with dice pool building. Left-click to add dice to pool, right-click to remove, then roll them all at once in a grid pattern. Drag for precise unrolled placement. Dynamic SVG generation provides player-colored dice with detailed wireframe designs. Deployed on Fly.io.
