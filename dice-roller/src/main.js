@@ -291,4 +291,31 @@ OBR.onReady(async () => {
       OBR.notification.show('Error rolling dice', 'ERROR');
     }
   });
+
+  // Set up "Remove All Dice" button
+  const removeButton = document.getElementById('remove-all');
+  removeButton.addEventListener('click', async () => {
+    try {
+      // Get all items in the scene
+      const allItems = await OBR.scene.items.getItems();
+
+      // Filter for dice items
+      const diceItems = allItems.filter(
+        (item) => item.metadata && item.metadata['dice-roller/type']
+      );
+
+      if (diceItems.length === 0) {
+        OBR.notification.show('No dice to remove!', 'WARNING');
+        return;
+      }
+
+      // Remove all dice
+      const diceIds = diceItems.map((item) => item.id);
+      await OBR.scene.items.deleteItems(diceIds);
+
+      OBR.notification.show(`Removed ${diceItems.length} dice`, 'INFO');
+    } catch (error) {
+      OBR.notification.show('Error removing dice', 'ERROR');
+    }
+  });
 });
